@@ -100,8 +100,9 @@ class OAuthToken {
   final String refreshToken;
   final DateTime expiration;
 
-  bool get isExpired =>
-      expiration != null && DateTime.now().isAfter(expiration);
+  const OAuthToken({this.accessToken, this.expiration, this.refreshToken});
+
+  bool get isExpired => expiration != null && DateTime.now().isAfter(expiration);
 
   OAuthToken.fromMap(Map<String, dynamic> map)
       : accessToken = map['access_token'],
@@ -149,16 +150,23 @@ class OAuth {
   /// Request a new Access Token using a strategy
   Future<OAuthToken> requestToken(OAuthGrantType grantType) {
     final request = grantType.handle(RequestOptions(
-        method: 'POST',
-        contentType: 'application/x-www-form-urlencoded',
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-          "Authorization":
-              "Basic ${stringToBase64.encode('$clientId:$clientSecret')}"
-        }));
+      method: 'POST',
+      contentType: 'application/x-www-form-urlencoded',
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Authorization": "Basic ${stringToBase64.encode('$clientId:$clientSecret')}"
+      },
+      path: '',
+    ));
 
     return dio
-        .request(tokenUrl, data: request.data, options: request)
+        .request(tokenUrl,
+            data: request.data,
+            options: Options(
+              method: request.method,
+              contentType: request.contentType,
+              headers: request.headers,
+            ))
         .then((res) => extractor(res));
   }
 
@@ -179,7 +187,6 @@ class OAuth {
   Future<OAuthToken> refreshAccessToken() async {
     OAuthToken token = await storage.fetch();
 
-    return this.requestTokenAndSave(
-        RefreshTokenGrant(refreshToken: token.refreshToken));
+    return this.requestTokenAndSave(RefreshTokenGrant(refreshToken: token.refreshToken));
   }
 }
